@@ -32,7 +32,7 @@ public class BleMidiSynthesizer implements Synthesizer {
      * @param bleMidiDevice the device
      */
     public BleMidiSynthesizer(final BleMidiDevice bleMidiDevice) {
-        this.bleMidiDevice = bleMidiDevice;
+            this.bleMidiDevice = bleMidiDevice;
 
         Receiver receiver = null;
         try {
