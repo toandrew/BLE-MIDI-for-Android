@@ -319,8 +319,8 @@ public final class BleMidiCentralProvider {
             ScanSettings scanSettings = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build();
             bluetoothLeScanner.startScan(scanFilters, scanSettings, scanCallback);
         } else {
-            bluetoothAdapter.startLeScan(BleMidiDeviceUtils.getUuidListForService(context), leScanCallback);
-            //bluetoothAdapter.startLeScan(leScanCallback);
+            //bluetoothAdapter.startLeScan(BleMidiDeviceUtils.getUuidListForService(context), leScanCallback);
+            bluetoothAdapter.startLeScan(leScanCallback);
         }
 
         // scanning
