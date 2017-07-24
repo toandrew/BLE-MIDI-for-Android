@@ -3,6 +3,7 @@ package jp.kshoji.blemidi.util;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.Intent;
@@ -108,5 +109,20 @@ public class BleUtils {
      */
     public static void enableBluetooth(@NonNull final Activity activity) {
         activity.startActivityForResult(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE), REQUEST_CODE_BLUETOOTH_ENABLE);
+    }
+
+
+    /**
+     * Whether support ble
+     *
+     * @param device
+     * @return
+     */
+    public static boolean isBleType(@NonNull BluetoothDevice device) {
+        if (device.getType() != BluetoothDevice.DEVICE_TYPE_LE && device.getType() != BluetoothDevice.DEVICE_TYPE_DUAL) {
+            return false;
+        }
+
+        return true;
     }
 }

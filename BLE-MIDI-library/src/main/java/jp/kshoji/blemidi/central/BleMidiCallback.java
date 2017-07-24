@@ -33,11 +33,22 @@ import jp.kshoji.blemidi.device.MidiInputDevice;
 import jp.kshoji.blemidi.device.MidiOutputDevice;
 import jp.kshoji.blemidi.listener.OnMidiDeviceAttachedListener;
 import jp.kshoji.blemidi.listener.OnMidiDeviceDetachedListener;
+import jp.kshoji.blemidi.listener.OnMidiDeviceStatusListener;
 import jp.kshoji.blemidi.listener.OnMidiInputEventListener;
 import jp.kshoji.blemidi.util.BleMidiDeviceUtils;
 import jp.kshoji.blemidi.util.BleMidiParser;
 import jp.kshoji.blemidi.util.BleUuidUtils;
 import jp.kshoji.blemidi.util.Constants;
+
+import static jp.kshoji.blemidi.listener.OnMidiDeviceStatusListener.DEVICE_CHAR_DISCOVERED_OK;
+import static jp.kshoji.blemidi.listener.OnMidiDeviceStatusListener.DEVICE_CHAR_ENABLE_WRITE;
+import static jp.kshoji.blemidi.listener.OnMidiDeviceStatusListener.DEVICE_CHAR_RECV_DATA;
+import static jp.kshoji.blemidi.listener.OnMidiDeviceStatusListener.DEVICE_CONNECTING;
+import static jp.kshoji.blemidi.listener.OnMidiDeviceStatusListener.DEVICE_DISCONNECTED;
+import static jp.kshoji.blemidi.listener.OnMidiDeviceStatusListener.DEVICE_SERVICE_DISCOVERED_FAILED;
+import static jp.kshoji.blemidi.listener.OnMidiDeviceStatusListener.DEVICE_SERVICE_DISCOVERED_OK;
+import static jp.kshoji.blemidi.listener.OnMidiDeviceStatusListener.DEVICE_SERVICE_DISCOVERING;
+import static jp.kshoji.blemidi.util.Constants.TAG;
 
 /**
  * BluetoothGattCallback implementation for BLE MIDI devices.
@@ -52,6 +63,8 @@ public final class BleMidiCallback extends BluetoothGattCallback {
 
     private OnMidiDeviceAttachedListener midiDeviceAttachedListener;
     private OnMidiDeviceDetachedListener midiDeviceDetachedListener;
+
+    private OnMidiDeviceStatusListener midiDeviceStatusListener;
 
     private boolean needsBonding = false;
 
@@ -80,20 +93,32 @@ public final class BleMidiCallback extends BluetoothGattCallback {
     @Override
     public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
         super.onConnectionStateChange(gatt, status, newState);
+
+        Log.w(TAG, "onConnectionStateChange!!!![" + newState + "]");
         // In this method, the `status` parameter shall be ignored.
         // so, look `newState` parameter only.
 
         if (newState == BluetoothProfile.STATE_CONNECTED) {
+            Log.w(TAG, "onConnectionStateChange!!!![" + newState + "] 1");
+
+            notifyMidiDeviceStatusChanged(gatt.getDevice(), DEVICE_SERVICE_DISCOVERING);
+
             if (!deviceAddressGattMap.containsKey(gatt.getDevice().getAddress())) {
+                Log.w(TAG, "onConnectionStateChange!!!![" + newState + "] 2");
                 if (gatt.discoverServices()) {
+                    Log.w(TAG, "onConnectionStateChange!!!![" + newState + "] 3");
                     // successfully started discovering
                 } else {
                     // already disconnected
+                    Log.w(TAG, "onConnectionStateChange!!!![" + newState + "] 4");
                     disconnectByDeviceAddress(gatt.getDevice().getAddress());
                 }
             }
         } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+            Log.w(TAG, "onConnectionStateChange!!!![" + newState + "] 5");
             disconnectByDeviceAddress(gatt.getDevice().getAddress());
+
+            notifyMidiDeviceStatusChanged(gatt.getDevice(), DEVICE_DISCONNECTED);
         }
     }
 
@@ -102,9 +127,14 @@ public final class BleMidiCallback extends BluetoothGattCallback {
     public void onServicesDiscovered(final BluetoothGatt gatt, int status) {
         super.onServicesDiscovered(gatt, status);
 
+        Log.e(TAG, "onServicesDiscovered!!!!");
+
         if (status != BluetoothGatt.GATT_SUCCESS) {
+            notifyMidiDeviceStatusChanged(gatt.getDevice(), DEVICE_SERVICE_DISCOVERED_FAILED);
             return;
         }
+
+        notifyMidiDeviceStatusChanged(gatt.getDevice(), DEVICE_SERVICE_DISCOVERED_OK);
 
         final String gattDeviceAddress = gatt.getDevice().getAddress();
 
@@ -124,7 +154,7 @@ public final class BleMidiCallback extends BluetoothGattCallback {
         try {
             midiInputDevice = new InternalMidiInputDevice(context, gatt);
         } catch (IllegalArgumentException iae) {
-            Log.d(Constants.TAG, iae.getMessage());
+            Log.d(TAG, iae.getMessage());
         }
         if (midiInputDevice != null) {
             synchronized (midiInputDevicesMap) {
@@ -156,7 +186,7 @@ public final class BleMidiCallback extends BluetoothGattCallback {
         try {
             midiOutputDevice = new InternalMidiOutputDevice(context, gatt);
         } catch (IllegalArgumentException iae) {
-            Log.d(Constants.TAG, iae.getMessage());
+            Log.d(TAG, iae.getMessage());
         }
         if (midiOutputDevice != null) {
             synchronized (midiOutputDevicesMap) {
@@ -220,6 +250,10 @@ public final class BleMidiCallback extends BluetoothGattCallback {
     public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
         super.onCharacteristicChanged(gatt, characteristic);
 
+        Log.w(TAG, "onCharacteristicChanged!!!!");
+
+        notifyMidiDeviceStatusChanged(gatt.getDevice(), DEVICE_CHAR_RECV_DATA);
+
         Set<MidiInputDevice> midiInputDevices = midiInputDevicesMap.get(gatt.getDevice().getAddress());
         for (MidiInputDevice midiInputDevice : midiInputDevices) {
             ((InternalMidiInputDevice)midiInputDevice).incomingData(characteristic.getValue());
@@ -229,6 +263,10 @@ public final class BleMidiCallback extends BluetoothGattCallback {
     @Override
     public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
         super.onDescriptorWrite(gatt, descriptor, status);
+
+        Log.w(TAG, "onDescriptorWrite!!!!");
+
+        notifyMidiDeviceStatusChanged(gatt.getDevice(), DEVICE_CHAR_ENABLE_WRITE);
 
         if (descriptor != null) {
             if (Arrays.equals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE, descriptor.getValue())) {
@@ -356,6 +394,7 @@ public final class BleMidiCallback extends BluetoothGattCallback {
      */
     @TargetApi(Build.VERSION_CODES.KITKAT)
     public void setNeedsBonding(boolean needsBonding) {
+        Log.w(TAG, "setNeedsBonding!!!!");
         this.needsBonding = needsBonding;
     }
 
@@ -383,6 +422,9 @@ public final class BleMidiCallback extends BluetoothGattCallback {
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
 
+
+            Log.w(TAG, "BondingBroadcastReceiver:onReceive!!!!");
+
             if (BluetoothDevice.ACTION_BOND_STATE_CHANGED.equals(action)) {
                 final int state = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR);
 
@@ -409,6 +451,8 @@ public final class BleMidiCallback extends BluetoothGattCallback {
      */
     @NonNull
     public Set<MidiInputDevice> getMidiInputDevices() {
+
+        Log.w(TAG, "getMidiInputDevices!!!!");
         Collection<Set<MidiInputDevice>> values = midiInputDevicesMap.values();
 
         Set<MidiInputDevice> result = new HashSet<>();
@@ -426,6 +470,9 @@ public final class BleMidiCallback extends BluetoothGattCallback {
      */
     @NonNull
     public Set<MidiOutputDevice> getMidiOutputDevices() {
+
+        Log.w(TAG, "getMidiOutputDevices!!!!");
+
         Collection<Set<MidiOutputDevice>> values = midiOutputDevicesMap.values();
 
         Set<MidiOutputDevice> result = new HashSet<>();
@@ -452,6 +499,15 @@ public final class BleMidiCallback extends BluetoothGattCallback {
      */
     public void setOnMidiDeviceDetachedListener(@Nullable OnMidiDeviceDetachedListener midiDeviceDetachedListener) {
         this.midiDeviceDetachedListener = midiDeviceDetachedListener;
+    }
+
+    /**
+     * Set the listener for device status(connecting, connected, idle, offline, error, etc)
+     *
+     * @param listener
+     */
+    public void setOnMidiDeviceStatusChangedListener(OnMidiDeviceStatusListener listener) {
+        midiDeviceStatusListener = listener;
     }
 
     /**
@@ -590,6 +646,7 @@ public final class BleMidiCallback extends BluetoothGattCallback {
 
         @Override
         public void transferData(@NonNull byte[] writeBuffer) {
+            Log.w(TAG, "transferData!!!!");
             midiOutputCharacteristic.setValue(writeBuffer);
 
             try {
@@ -614,6 +671,21 @@ public final class BleMidiCallback extends BluetoothGattCallback {
         @NonNull
         public String getDeviceAddress() {
             return bluetoothGatt.getDevice().getAddress();
+        }
+    }
+
+    public void setOnMidiDeviceStatusListener(OnMidiDeviceStatusListener listener) {
+        midiDeviceStatusListener = listener;
+    }
+
+    /**
+     * Notify when ble midi device status changed!
+     *
+     * @param status
+     */
+    private void notifyMidiDeviceStatusChanged(@NonNull BluetoothDevice device, int status) {
+        if (midiDeviceStatusListener != null) {
+            midiDeviceStatusListener.onDeviceStatusChanged(device, status);
         }
     }
 }

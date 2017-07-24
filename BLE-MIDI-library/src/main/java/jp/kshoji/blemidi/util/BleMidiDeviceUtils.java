@@ -1,6 +1,7 @@
 package jp.kshoji.blemidi.util;
 
 import android.annotation.TargetApi;
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
@@ -113,5 +114,24 @@ public final class BleMidiDeviceUtils {
         }
 
         return scanFilters;
+    }
+
+    /**
+     *
+     * @param context
+     * @return
+     */
+    public static UUID[] getUuidListForService(@NonNull final Context context) {
+        String[] uuidStringArray = context.getResources().getStringArray(R.array.uuidListForService);
+
+//        final UUID[] serviceUuids = new UUID[uuidStringArray.length];
+//        for (int i = 0; i < uuidStringArray.length; i++) {
+//            String uuidString = uuidStringArray[i];
+//            serviceUuids[i] = UUID.fromString(uuidString);
+//        }
+
+        UUID[] serviceUuids = new UUID[1];
+        serviceUuids[0] = UUID.fromString("03b80e5a-ede8-4b33-a751-6ce34ec4c700");
+        return serviceUuids;
     }
 }

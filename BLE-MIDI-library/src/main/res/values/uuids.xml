@@ -2,9 +2,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="TypographyDashes">
     <!-- Advertise and Services UUID for MIDI -->
     <string-array name="uuidListForService">
-        <item>713d0000-503e-4c75-ba94-3148f18d941e</item><!-- RedBearLab Biscuit -->
-        <item>6e400001-b5a3-f393-e0a9-e50e24dcca9e</item><!-- Nordic Semiconductor nRF-UART-App -->
-        <item>15c3d473-ab76-483f-a874-d08849b8f5c7</item><!-- QUICCO mi.1 -->
         <item>03b80e5a-ede8-4b33-a751-6ce34ec4c700</item><!-- Apple BLE MIDI -->
     </string-array>
 
