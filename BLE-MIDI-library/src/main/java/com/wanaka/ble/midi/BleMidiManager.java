@@ -107,7 +107,7 @@ public class BleMidiManager {
 
             @Override
             public void onMidiOutputDeviceAttached(@NonNull MidiOutputDevice device) {
-                Log.w(TAG, "onMidiOutputDeviceAttached![" + midiOutputDevice + "]");
+                Log.w(TAG, "onMidiOutputDeviceAttached![" + device + "]");
 //                Message message = new Message();
 //                message.arg1 = 0;
 //                message.obj = midiOutputDevice;
@@ -121,7 +121,7 @@ public class BleMidiManager {
 
         mBleMidiCentralProvider.setOnMidiDeviceDetachedListener(new OnMidiDeviceDetachedListener() {
             @Override
-            public void onMidiInputDeviceDetached(@NonNull MidiInputDevice midiInputDevice) {
+            public void onMidiInputDeviceDetached(@NonNull MidiInputDevice device) {
                 Log.w(TAG, "onMidiInputDeviceDetached![" + midiInputDevice + "]");
                 // do nothing
 
@@ -131,7 +131,7 @@ public class BleMidiManager {
             }
 
             @Override
-            public void onMidiOutputDeviceDetached(@NonNull MidiOutputDevice midiOutputDevice) {
+            public void onMidiOutputDeviceDetached(@NonNull MidiOutputDevice device) {
                 Log.w(TAG, "onMidiOutputDeviceDetached![" + midiOutputDevice + "]");
 //                Message message = new Message();
 //                message.arg1 = 1;

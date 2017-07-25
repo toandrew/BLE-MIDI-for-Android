@@ -266,10 +266,10 @@ public final class BleMidiCallback extends BluetoothGattCallback {
 
         Log.w(TAG, "onDescriptorWrite!!!!");
 
-        notifyMidiDeviceStatusChanged(gatt.getDevice(), DEVICE_CHAR_ENABLE_WRITE);
-
         if (descriptor != null) {
             if (Arrays.equals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE, descriptor.getValue())) {
+                notifyMidiDeviceStatusChanged(gatt.getDevice(), DEVICE_CHAR_ENABLE_WRITE);
+
                 gatt.setCharacteristicNotification(descriptor.getCharacteristic(), true);
             }
         }
