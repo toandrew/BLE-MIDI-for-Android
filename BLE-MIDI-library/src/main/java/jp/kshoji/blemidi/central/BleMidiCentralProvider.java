@@ -230,11 +230,18 @@ public final class BleMidiCentralProvider {
     public boolean connect(BluetoothDevice device) {
         notifyMidiDeviceStatusChanged(device, DEVICE_CONNECTING);
 
-        if (device.connectGatt(context, true, midiCallback) != null) {
+        BluetoothDevice d = bluetoothAdapter.getRemoteDevice(device.getAddress());
+        if (d == device) {
+            Log.w(TAG, "connect same device[" + device + "][" + d + "]");
+        } else {
+            Log.w(TAG, "connect not the same device[" + device + "][" + d + "]");
+        }
+
+        if (d.connectGatt(context, true, midiCallback) != null) {
             return true;
         }
 
-        notifyMidiDeviceStatusChanged(device, DEVICE_ERROR);
+        notifyMidiDeviceStatusChanged(d, DEVICE_ERROR);
 
         return false;
     }

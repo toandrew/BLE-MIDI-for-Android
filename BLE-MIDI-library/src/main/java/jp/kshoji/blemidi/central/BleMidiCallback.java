@@ -311,6 +311,10 @@ public final class BleMidiCallback extends BluetoothGattCallback {
             BluetoothGatt bluetoothGatt = deviceAddressGattMap.get(deviceAddress);
 
             if (bluetoothGatt != null) {
+
+                // notify disconnect
+                notifyMidiDeviceStatusChanged(bluetoothGatt.getDevice(), DEVICE_DISCONNECTED);
+
                 bluetoothGatt.disconnect();
                 bluetoothGatt.close();
 

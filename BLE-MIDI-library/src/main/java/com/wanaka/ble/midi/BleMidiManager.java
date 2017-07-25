@@ -64,7 +64,9 @@ public class BleMidiManager {
     }
 
     public void disconnect() {
-        mBleMidiCentralProvider.disconnect(midiInputDevice, midiOutputDevice);
+        if (isConnected()) {
+            mBleMidiCentralProvider.disconnect(midiInputDevice, midiOutputDevice);
+        }
     }
 
     /**
@@ -94,20 +96,24 @@ public class BleMidiManager {
     private void initStatusListeners() {
         mBleMidiCentralProvider.setOnMidiDeviceAttachedListener(new OnMidiDeviceAttachedListener() {
             @Override
-            public void onMidiInputDeviceAttached(@NonNull MidiInputDevice midiInputDevice) {
-                Log.w(TAG, "onMidiInputDeviceAttached![" + midiInputDevice + "]");
+            public void onMidiInputDeviceAttached(@NonNull MidiInputDevice device) {
+                Log.w(TAG, "onMidiInputDeviceAttached![" + device + "]");
                 //midiInputDevice.setOnMidiInputEventListener(onMidiInputEventListener);
+
+                midiInputDevice = device;
 
                 mIsConnected = true;
             }
 
             @Override
-            public void onMidiOutputDeviceAttached(@NonNull MidiOutputDevice midiOutputDevice) {
+            public void onMidiOutputDeviceAttached(@NonNull MidiOutputDevice device) {
                 Log.w(TAG, "onMidiOutputDeviceAttached![" + midiOutputDevice + "]");
 //                Message message = new Message();
 //                message.arg1 = 0;
 //                message.obj = midiOutputDevice;
 //                midiOutputConnectionChangedHandler.sendMessage(message);
+
+                midiOutputDevice = device;
 
                 mIsConnected = true;
             }
@@ -119,6 +125,8 @@ public class BleMidiManager {
                 Log.w(TAG, "onMidiInputDeviceDetached![" + midiInputDevice + "]");
                 // do nothing
 
+                midiInputDevice = null;
+
                 mIsConnected = false;
             }
 
@@ -129,6 +137,8 @@ public class BleMidiManager {
 //                message.arg1 = 1;
 //                message.obj = midiOutputDevice;
 //                midiOutputConnectionChangedHandler.sendMessage(message);
+
+                midiOutputDevice = null;
 
                 mIsConnected = false;
             }
