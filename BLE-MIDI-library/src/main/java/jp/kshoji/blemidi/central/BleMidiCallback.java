@@ -31,19 +31,16 @@ import java.util.UUID;
 
 import jp.kshoji.blemidi.device.MidiInputDevice;
 import jp.kshoji.blemidi.device.MidiOutputDevice;
+import jp.kshoji.blemidi.listener.OnMidiDataListener;
 import jp.kshoji.blemidi.listener.OnMidiDeviceAttachedListener;
 import jp.kshoji.blemidi.listener.OnMidiDeviceDetachedListener;
 import jp.kshoji.blemidi.listener.OnMidiDeviceStatusListener;
 import jp.kshoji.blemidi.listener.OnMidiInputEventListener;
 import jp.kshoji.blemidi.util.BleMidiDeviceUtils;
-import jp.kshoji.blemidi.util.BleMidiParser;
 import jp.kshoji.blemidi.util.BleUuidUtils;
-import jp.kshoji.blemidi.util.Constants;
 
-import static jp.kshoji.blemidi.listener.OnMidiDeviceStatusListener.DEVICE_CHAR_DISCOVERED_OK;
 import static jp.kshoji.blemidi.listener.OnMidiDeviceStatusListener.DEVICE_CHAR_ENABLE_WRITE;
 import static jp.kshoji.blemidi.listener.OnMidiDeviceStatusListener.DEVICE_CHAR_RECV_DATA;
-import static jp.kshoji.blemidi.listener.OnMidiDeviceStatusListener.DEVICE_CONNECTING;
 import static jp.kshoji.blemidi.listener.OnMidiDeviceStatusListener.DEVICE_DISCONNECTED;
 import static jp.kshoji.blemidi.listener.OnMidiDeviceStatusListener.DEVICE_SERVICE_DISCOVERED_FAILED;
 import static jp.kshoji.blemidi.listener.OnMidiDeviceStatusListener.DEVICE_SERVICE_DISCOVERED_OK;
@@ -65,6 +62,8 @@ public final class BleMidiCallback extends BluetoothGattCallback {
     private OnMidiDeviceDetachedListener midiDeviceDetachedListener;
 
     private OnMidiDeviceStatusListener midiDeviceStatusListener;
+
+    private OnMidiDataListener midiDataListener;
 
     private boolean needsBonding = false;
 
@@ -145,6 +144,7 @@ public final class BleMidiCallback extends BluetoothGattCallback {
                 for (MidiInputDevice midiInputDevice : midiInputDevices) {
                     ((InternalMidiInputDevice) midiInputDevice).stop();
                     midiInputDevice.setOnMidiInputEventListener(null);
+                    midiInputDevice.setOnMidiDataListener(null);
                 }
                 midiInputDevicesMap.remove(gattDeviceAddress);
             }
@@ -158,6 +158,10 @@ public final class BleMidiCallback extends BluetoothGattCallback {
         }
         if (midiInputDevice != null) {
             synchronized (midiInputDevicesMap) {
+                if (midiDataListener != null) {
+                    midiInputDevice.setOnMidiDataListener(midiDataListener);
+                }
+
                 Set<MidiInputDevice> midiInputDevices = midiInputDevicesMap.get(gattDeviceAddress);
                 if (midiInputDevices == null) {
                     midiInputDevices = new HashSet<>();
@@ -330,6 +334,7 @@ public final class BleMidiCallback extends BluetoothGattCallback {
                 for (MidiInputDevice midiInputDevice : midiInputDevices) {
                     ((InternalMidiInputDevice) midiInputDevice).stop();
                     midiInputDevice.setOnMidiInputEventListener(null);
+                    midiInputDevice.setOnMidiDataListener(null);
 
                     if (midiDeviceDetachedListener != null) {
                         midiDeviceDetachedListener.onMidiInputDeviceDetached(midiInputDevice);
@@ -372,6 +377,7 @@ public final class BleMidiCallback extends BluetoothGattCallback {
                 for (MidiInputDevice midiInputDevice : midiInputDevices) {
                     ((InternalMidiInputDevice) midiInputDevice).stop();
                     midiInputDevice.setOnMidiInputEventListener(null);
+                    midiInputDevice.setOnMidiDataListener(null);
                 }
 
                 midiInputDevices.clear();
@@ -514,6 +520,10 @@ public final class BleMidiCallback extends BluetoothGattCallback {
         midiDeviceStatusListener = listener;
     }
 
+    public void setOnMidiDataListener(OnMidiDataListener midiDataListener) {
+        this.midiDataListener = midiDataListener;
+    }
+
     /**
      * {@link MidiInputDevice} for Central
      *
@@ -523,7 +533,9 @@ public final class BleMidiCallback extends BluetoothGattCallback {
         private final BluetoothGatt bluetoothGatt;
         private final BluetoothGattCharacteristic midiInputCharacteristic;
 
-        private final BleMidiParser midiParser = new BleMidiParser(this);
+        private OnMidiDataListener midiDataListener;
+
+//        private final BleMidiParser midiParser = new BleMidiParser(this);
 
         /**
          * Constructor for Central
@@ -555,7 +567,7 @@ public final class BleMidiCallback extends BluetoothGattCallback {
          * Stops parser's thread
          */
         void stop() {
-            midiParser.stop();
+            //midiParser.stop();
         }
 
         /**
@@ -577,8 +589,14 @@ public final class BleMidiCallback extends BluetoothGattCallback {
 
         @Override
         public void setOnMidiInputEventListener(OnMidiInputEventListener midiInputEventListener) {
-            midiParser.setMidiInputEventListener(midiInputEventListener);
+            //midiParser.setMidiInputEventListener(midiInputEventListener);
         }
+
+        @Override
+        public void setOnMidiDataListener(OnMidiDataListener listener) {
+            this.midiDataListener = listener;
+        }
+
 
         @NonNull
         @Override
@@ -602,7 +620,44 @@ public final class BleMidiCallback extends BluetoothGattCallback {
          * @param data the MIDI data
          */
         private void incomingData(@NonNull byte[] data) {
-            midiParser.parse(data);
+            Log.w(TAG, "incomingData!!!!!!");
+            if (midiDataListener != null) {
+
+                midiDataListener.onMidiData(this, parse(data));
+            }
+            //midiParser.parse(data);
+        }
+
+        /**
+         * Updates incoming data. remove all '0x80' bytes
+         *
+         * @param data parsed data
+         * @return
+         */
+        private byte[] parse(@NonNull byte[] data) {
+            if (data.length > 1) {
+
+                // get actual length
+                int len = 0;
+                for (int i = 0; i < data.length; i++) {
+                    if (data[i] != -128) {
+                        len++;
+                    }
+                }
+
+                // remove '0x80'
+                byte[] midiData = new byte[len];
+                int index = 0;
+                for (int i = 0; i < data.length; i++) {
+                    if (data[i] != -128) {
+                        midiData[index++] = data[i];
+                    }
+                }
+
+                return midiData;
+            } else {
+                return null;
+            }
         }
     }
 

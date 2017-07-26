@@ -22,9 +22,12 @@ import java.util.Set;
 
 import jp.kshoji.blemidi.device.MidiInputDevice;
 import jp.kshoji.blemidi.device.MidiOutputDevice;
-import jp.kshoji.blemidi.listener.OnMidiDeviceFoundListener;
+import jp.kshoji.blemidi.exception.BleAdapterException;
+import jp.kshoji.blemidi.exception.BlueToothNotEnableException;
+import jp.kshoji.blemidi.listener.OnMidiDataListener;
 import jp.kshoji.blemidi.listener.OnMidiDeviceAttachedListener;
 import jp.kshoji.blemidi.listener.OnMidiDeviceDetachedListener;
+import jp.kshoji.blemidi.listener.OnMidiDeviceFoundListener;
 import jp.kshoji.blemidi.listener.OnMidiDeviceStatusListener;
 import jp.kshoji.blemidi.listener.OnMidiScanStatusListener;
 import jp.kshoji.blemidi.util.BleMidiDeviceUtils;
@@ -60,6 +63,8 @@ public final class BleMidiCentralProvider {
 
     private OnMidiDeviceStatusListener onMidiDeviceStatusListener;
 
+    private OnMidiDataListener onMidiDataListener;
+
     private boolean autoConnect = false;
 
     /**
@@ -87,18 +92,19 @@ public final class BleMidiCentralProvider {
      * @param context the context
      */
     @SuppressLint("NewApi")
-    public BleMidiCentralProvider(@NonNull final Context context) throws UnsupportedOperationException {
+    public BleMidiCentralProvider(@NonNull final Context context) throws UnsupportedOperationException, BleAdapterException, BlueToothNotEnableException {
         if (!BleUtils.isBleSupported(context)) {
             throw new UnsupportedOperationException("Bluetooth LE not supported on this device.");
         }
 
         bluetoothAdapter = getBleAdapter(context);
         if (bluetoothAdapter == null) {
-            throw new UnsupportedOperationException("Bluetooth is not available.");
+            throw new BleAdapterException("Bluetooth is not available.");
         }
 
         if (bluetoothAdapter.isEnabled() == false) {
-            throw new UnsupportedOperationException("Bluetooth is disabled.");
+            //throw new BlueToothNotEnableException("Bluetooth is disabled.");
+            bluetoothAdapter.enable();
         }
 
         this.context = context;
@@ -219,6 +225,15 @@ public final class BleMidiCentralProvider {
      */
     public void setOnBluetoothDeviceFoundListener(OnMidiDeviceFoundListener listener) {
         bluetoothDeviceFoundListener = listener;
+    }
+
+
+    public void setOnMidiDataListener(OnMidiDataListener listener) {
+        onMidiDataListener = listener;
+
+        if (midiCallback != null) {
+            midiCallback.setOnMidiDataListener(listener);
+        }
     }
 
     /**

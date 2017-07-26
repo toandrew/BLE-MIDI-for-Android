@@ -3,6 +3,7 @@ package jp.kshoji.blemidi.device;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import jp.kshoji.blemidi.listener.OnMidiDataListener;
 import jp.kshoji.blemidi.listener.OnMidiInputEventListener;
 
 /**
@@ -40,4 +41,11 @@ public abstract class MidiInputDevice {
     public final String toString() {
         return getDeviceName();
     }
+
+    /**
+     * Listener when midi data is received
+     *
+     * @param listener
+     */
+    public abstract void setOnMidiDataListener(OnMidiDataListener listener);
 }
